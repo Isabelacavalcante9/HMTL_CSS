@@ -7,6 +7,11 @@ const STORAGE_KEYS = {
   lastOrder: 'elora_last_order'
 };
 
+const PIX_CODE = '00020126360014BR.GOV.BCB.PIX0114+55000000000052040000530398654040.005802BR5913ELORA DEMO6008SAO PAULO62070503***6304ABCD';
+let pixCountdownTimer = null;
+let pixSecondsRemaining = 300;
+let pixPaymentConfirmed = false;
+
 const FALLBACK_IMAGE = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 900">
     <rect width="700" height="900" fill="#E5D6CC"/>
@@ -16,28 +21,106 @@ const FALLBACK_IMAGE = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
   </svg>
 `);
 
-// Imagens reais já existentes, organizadas por ID para impedir qualquer compartilhamento entre produtos.
-// Os demais produtos usam caminhos individuais de reserva, que podem ser substituídos por fotos reais depois.
+// Imagens reais organizadas por ID, usando os arquivos existentes em Img.
 const productImageOverrides = {
   'vestido-01': [
-    'img/miragembege.png',
-    'img/miragempreto.png'
+    'Img/miragembege.png',
+    'Img/miragempreto.png'
   ],
   'vestido-02': [
-    'img/vestido_midi_vinho.png',
-    'img/naodisponivel.png'
+    'Img/vestido_midi_vinho.png',
+    'Img/vesti2_2.png'
   ],
   'vestido-03': [
-    'img/vesti3.png',
-    'img/vesti3_2.png'
+    'Img/vesti3.png',
+    'Img/vesti3_2.png'
   ],
   'vestido-04': [
-    'img/vesti4.png',
-    'img/naodisponivel.png'
+    'Img/vesti4.png',
+    'Img/vesti4_2.png'
   ],
   'vestido-05': [
-    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=900&q=85',
-    'https://images.unsplash.com/photo-1544957992-20514f595d6f?auto=format&fit=crop&w=900&q=85'
+    'Img/vesti5_2.png',
+    'Img/vesti5.png'
+  ],
+  'vestido-06': [
+    'Img/vesti6.png',
+    'Img/vesti6_2.png'
+  ],
+  'vestido-07': [
+    'Img/vesti7.png',
+    'Img/vesti7_2.png'
+  ],
+  'vestido-08': [
+    'Img/vesti8.png',
+    'Img/vesti8_2.png'
+  ],
+  'vestido-09': [
+    'Img/vesti9.png',
+    'Img/vesti9_2.png'
+  ],
+  'blusa-01': [
+    'Img/b1.png',
+    'Img/b1_2.png'
+  ],
+  'blusa-02': [
+    'Img/Blusa 2 vinho.png', 
+    'Img/blusa 2 preto.png'
+  ],
+  'blusa-03': [
+    'Img/blusa 3 rosa.png', 
+    'Img/blusa 3 branca.png'
+  ],
+  'blusa-04': [
+    'Img/blusa 4 branco.png', 
+    'Img/blusa 4 vinho.png'
+  ],
+  'blusa-05': [
+    'Img/blusa 5 preto.png', 
+    'Img/blusa 5 rosa.png'
+  ],
+  'blusa-06': [
+    'Img/blusa 6 marrom.png', 
+    'Img/blusa 6 bege.png'
+  ],
+  'blusa-07': [
+    'Img/blusa 7 branco.png', 
+    'Img/blusa 7 rosa.png'
+  ],
+  'blusa-08': [
+    'Img/blusa 8 vinho.png',
+     'Img/blusa 8 preto.png'
+    ],
+  'blusa-09': [
+    'Img/blusa 9 bege.png', 
+    'Img/blusa 9 marrom.png'
+  ],
+  'calca-01': [
+    'Img/calça 1 preto.png'
+  ],
+  'calca-02': [
+    'Img/calça 2 marrom.png'
+  ],
+  'calca-03': [
+    'Img/calça 3 preto.png'
+  ],
+  'calca-04': [
+    'Img/calça 4 marrom.png'
+  ],
+  'calca-05': [
+    'Img/calça 5 vinho.png'
+  ],
+  'calca-06': [
+    'Img/calça 6 bege.png'
+  ],
+  'calca-07': [
+    'Img/calça 7 branco.png'
+  ],
+  'calca-08': [
+    'Img/calça 8 marrom.png'
+  ],
+  'calca-09': [
+    'Img/calça 9 preto.png'
   ]
 };
 
@@ -51,11 +134,11 @@ const measuresDefault = {
 function makeImages(productId) {
   const configuredImages = productImageOverrides[productId];
   if (configuredImages) return [...configuredImages];
-  return [1, 2].map((number) => `img/produtos/${productId}-${number}.jpg`);
+  return [1, 2].map((number) => `Img/produtos/${productId}-${number}.jpg`);
 }
 
 function product(id, nome, categoria, preco, precoAntigo, cor, cores, descricao, index, destaque = false, novidade = false) {
-  const imagens = makeImages(id);
+  const imagens = categoria === 'calcas' ? makeImages(id).slice(0, 1) : makeImages(id);
   const nomeBase = nome.replace(new RegExp(`\\s+${String(cor).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}$`, 'i'), '').trim() || nome;
   return {
     id,
@@ -79,32 +162,32 @@ function product(id, nome, categoria, preco, precoAntigo, cor, cores, descricao,
 
 const products = [
   product('vestido-01', 'Vestido Longo Miragem Bege', 'vestidos', 229.90, 299.90, 'Bege', ['Bege', 'Preto'], 'Silhueta longa e fluida com decote delicado, feita para acompanhar ocasiões especiais com leveza.', 0, true, true),
-  product('vestido-02', 'Vestido Midi Aurora Vinho', 'vestidos', 189.90, 249.90, 'Vinho', ['Vinho', 'Rosa'], 'Modelagem midi com cintura marcada e acabamento elegante para uma presença memorável.', 1, true, true),
+  product('vestido-02', 'Vestido Midi Aurora Vinho', 'vestidos', 189.90, 249.90, 'Vinho', ['Vinho', 'Preto'], 'Modelagem midi com cintura marcada e acabamento elegante para uma presença memorável.', 1, true, true),
   product('vestido-03', 'Vestido Longo Lírio Preto', 'vestidos', 159.90, null, 'Preto', ['Preto', 'Branco'], 'Um essencial sofisticado com linhas limpas, alças finas e caimento confortável.', 2, true, false),
-  product('vestido-04', 'Vestido Acetinado Íris Rosa', 'vestidos', 279.90, 339.90, 'Rosa', ['Rosa', 'Vinho'], 'Brilho sutil e toque acetinado em uma peça que transita do jantar ao evento.', 3, false, true),
-  product('vestido-05', 'Vestido Linho Serena Branco', 'vestidos', 149.90, null, 'Branco', ['Branco', 'Bege'], 'Linho leve e natural com shape descontraído para os dias de sol.', 4, false, false),
-  product('vestido-06', 'Vestido Envelope Amora', 'vestidos', 199.90, 229.90, 'Vinho', ['Vinho', 'Marrom'], 'Decote envelope e movimento envolvente em uma proposta feminina e atual.', 5, false, false),
+  product('vestido-04', 'Vestido Acetinado Íris Rosa', 'vestidos', 279.90, 339.90, 'Rosa', ['Rosa', 'Preto'], 'Brilho sutil e toque acetinado em uma peça que transita do jantar ao evento.', 3, false, true),
+  product('vestido-05', 'Vestido Linho Serena Branco', 'vestidos', 149.90, null, 'Branco', ['Branco', 'Preto'], 'Linho leve e natural com shape descontraído para os dias de sol.', 4, false, false),
+  product('vestido-06', 'Vestido Envelope Marrom', 'vestidos', 199.90, 229.90, 'Marrom', ['Marrom', 'Bege'], 'Decote envelope e movimento envolvente em uma proposta feminina e atual.', 5, false, false),
   product('vestido-07', 'Vestido Canelado Noa Marrom', 'vestidos', 89.90, 119.90, 'Marrom', ['Marrom', 'Preto'], 'Textura canelada e conforto para um visual minimalista de todos os dias.', 6, false, false),
-  product('vestido-08', 'Vestido Plissado Celeste Bege', 'vestidos', 319.90, null, 'Bege', ['Bege', 'Rosa'], 'Plissado delicado e comprimento midi para uma leitura contemporânea da elegância.', 7, false, true),
-  product('vestido-09', 'Vestido Camisa Alvorada', 'vestidos', 179.90, 219.90, 'Branco', ['Branco', 'Marrom'], 'A praticidade da camisa encontra a delicadeza de um vestido essencial.', 8, false, false),
-  product('blusa-01', 'Blusa Seda Essencial Off-White', 'blusas', 129.90, 169.90, 'Branco', ['Branco', 'Bege'], 'Toque sedoso e gola clássica em uma base refinada para o guarda-roupa.', 9, true, true),
+  product('vestido-08', 'Vestido Plissado Celeste Bege', 'vestidos', 319.90, null, 'Bege', ['Bege', 'Marrom'], 'Plissado delicado e comprimento midi para uma leitura contemporânea da elegância.', 7, false, true),
+  product('vestido-09', 'Vestido Longo Eclipse', 'vestidos', 179.90, 219.90, 'Branco', ['Branco', 'Preto'], 'A praticidade da camisa encontra a delicadeza de um vestido essencial.', 8, false, false),
+  product('blusa-01', 'Blusa Seda Essencial Bege', 'blusas', 129.90, 169.90, 'Bege', ['Bege', 'Marrom'], 'Toque sedoso e gola clássica em uma base refinada para o guarda-roupa.', 9, true, true),
   product('blusa-02', 'Blusa Decote V Rubi', 'blusas', 99.90, null, 'Vinho', ['Vinho', 'Preto'], 'Decote V sutil e tecido macio para iluminar produções diurnas e noturnas.', 10, true, false),
   product('blusa-03', 'Blusa Cropped Nara Rosa', 'blusas', 79.90, 99.90, 'Rosa', ['Rosa', 'Branco'], 'Proporção cropped e cor suave em uma peça fácil de combinar.', 11, true, true),
   product('blusa-04', 'Blusa Linho Horizonte Bege', 'blusas', 159.90, null, 'Bege', ['Bege', 'Branco'], 'Linho texturizado, mangas amplas e frescor para os dias mais leves.', 12, false, false),
   product('blusa-05', 'Blusa Ombro Único Vitta Preta', 'blusas', 189.90, 239.90, 'Preto', ['Preto', 'Vinho'], 'Uma assimetria marcante para compor looks de personalidade.', 13, false, true),
   product('blusa-06', 'Blusa Tricot Amêndoa', 'blusas', 219.90, null, 'Marrom', ['Marrom', 'Bege'], 'Tricot leve com trama macia e volume preciso para os dias de meia-estação.', 14, false, false),
   product('blusa-07', 'Blusa Básica Aura Branca', 'blusas', 65.90, null, 'Branco', ['Branco', 'Rosa'], 'A base indispensável com acabamento premium e toque suave.', 15, false, false),
-  product('blusa-08', 'Blusa Laço Chiara Vinho', 'blusas', 139.90, 179.90, 'Vinho', ['Vinho', 'Rosa'], 'Laço frontal e fluidez para uma feminilidade sem excessos.', 0, false, false),
+  product('blusa-08', 'Blusa Laço Chiara Vinho', 'blusas', 139.90, 179.90, 'Vinho', ['Vinho', 'Preto'], 'Laço frontal e fluidez para uma feminilidade sem excessos.', 0, false, false),
   product('blusa-09', 'Blusa Social Mirra Rosa', 'blusas', 229.90, 279.90, 'Rosa', ['Rosa', 'Bege'], 'Alfaiataria delicada com caimento impecável e presença editorial.', 1, false, true),
-  product('calca-01', 'Calça Alfaiataria Ímpar Bege', 'calcas', 229.90, 299.90, 'Bege', ['Bege', 'Preto'], 'Cintura alta e pernas retas para uma alfaiataria versátil e sofisticada.', 2, true, true),
-  product('calca-02', 'Calça Pantalona Sépia', 'calcas', 279.90, null, 'Marrom', ['Marrom', 'Bege'], 'Pantalona ampla com movimento e estrutura na medida certa.', 3, true, false),
-  product('calca-03', 'Calça Reta Alba Preta', 'calcas', 189.90, 229.90, 'Preto', ['Preto', 'Vinho'], 'Shape reto e tecido encorpado para acompanhar diferentes ocasiões.', 4, true, true),
-  product('calca-04', 'Calça Cenoura Terracota', 'calcas', 169.90, null, 'Marrom', ['Marrom', 'Rosa'], 'Modelagem cenoura em tom terroso, confortável e cheia de personalidade.', 5, false, false),
-  product('calca-05', 'Calça Flare Violeta', 'calcas', 349.90, 419.90, 'Vinho', ['Vinho', 'Preto'], 'Flare alongada com caimento elegante para produções marcantes.', 6, false, true),
-  product('calca-06', 'Calça Jogger Cora', 'calcas', 119.90, 149.90, 'Bege', ['Bege', 'Preto'], 'Conforto casual com acabamento limpo e toque utilitário.', 7, false, false),
-  product('calca-07', 'Calça Sarja Off-White', 'calcas', 89.90, null, 'Branco', ['Branco', 'Bege'], 'Sarja leve e cintura confortável para a rotina com estilo.', 8, false, false),
-  product('calca-08', 'Calça Clochard Siena', 'calcas', 219.90, 269.90, 'Rosa', ['Rosa', 'Marrom'], 'Cintura marcada e volume elegante em uma interpretação feminina da clochard.', 9, false, false),
-  product('calca-09', 'Calça Reta Noite', 'calcas', 159.90, null, 'Preto', ['Preto', 'Branco'], 'Um clássico essencial para criar bases sofisticadas sem esforço.', 10, false, true)
+  product('calca-01', 'Calça Alfaiataria Ímpar Preto', 'calcas', 229.90, 299.90, 'Preto', ['Preto'], 'Cintura alta e pernas retas para uma alfaiataria versátil e sofisticada.', 2, true, true),
+  product('calca-02', 'Calça Pantalona Sépia Marrom', 'calcas', 279.90, null, 'Marrom', ['Marrom'], 'Pantalona ampla com movimento e estrutura na medida certa.', 3, true, false),
+  product('calca-03', 'Calça Reta Alba Preta', 'calcas', 189.90, 229.90, 'Preto', ['Preto'], 'Shape reto e tecido encorpado para acompanhar diferentes ocasiões.', 4, true, true),
+  product('calca-04', 'Calça Cenoura Terracota', 'calcas', 169.90, null, 'Marrom', ['Marrom'], 'Modelagem cenoura em tom terroso, confortável e cheia de personalidade.', 5, false, false),
+  product('calca-05', 'Calça Flare Violeta', 'calcas', 349.90, 419.90, 'Vinho', ['Vinho'], 'Flare alongada com caimento elegante para produções marcantes.', 6, false, true),
+  product('calca-06', 'Calça Jogger Cora', 'calcas', 119.90, 149.90, 'Bege', ['Bege'], 'Conforto casual com acabamento limpo e toque utilitário.', 7, false, false),
+  product('calca-07', 'Calça Sarja ', 'calcas', 89.90, null, 'Branco', ['Branco'], 'Sarja leve e cintura confortável para a rotina com estilo.', 8, false, false),
+  product('calca-08', 'Calça Clochard Siena', 'calcas', 219.90, 269.90, 'Marrom', ['Marrom'], 'Cintura marcada e volume elegante em uma interpretação feminina da clochard.', 9, false, false),
+  product('calca-09', 'Calça Reta Noite', 'calcas', 159.90, null, 'Preto', ['Preto'], 'Um clássico essencial para criar bases sofisticadas sem esforço.', 10, false, true)
 ];
 
 const state = {
@@ -119,7 +202,8 @@ const state = {
   galleryIndex: 0,
   lastProductId: '',
   mobileMenuOpen: false,
-  mobileFiltersOpen: false
+  mobileFiltersOpen: false,
+  returnToCartAfterLogin: false
 };
 
 function normalizeText(text) {
@@ -582,7 +666,31 @@ function renderCartPage() {
   const items = cartDetails();
   if (!items.length) return `<section class="cart-shell container"><div class="empty-state"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.8 5.5h2.1l1.7 10.1h9.9l2.1-7.3H6.4"/><path d="M9.1 20.2a1.1 1.1 0 1 0 0-2.2 1.1 1.1 0 0 0 0 2.2ZM17 20.2a1.1 1.1 0 1 0 0-2.2 1.1 1.1 0 0 0 0 2.2Z"/></svg><h1>Seu carrinho está vazio</h1><p>Adicione suas peças favoritas para continuar.</p><a class="button" href="#/home">Continuar comprando</a></div></section>`;
   const totals = cartTotals(items);
-  return `<section class="cart-shell container"><h1>Meu carrinho</h1><div class="cart-layout"><div class="cart-items">${items.map(({ line, item }) => `<article class="cart-item"><a class="cart-item-image" href="#/produto/${item.id}"><img src="${line.imagem || getProductImageForColor(item, line.cor)}" alt="${escapeHTML(line.nome || getProductDisplayName(item, line.cor))}" loading="lazy" /></a><div class="cart-item-info"><h2><a href="#/produto/${item.id}">${escapeHTML(line.nome || getProductDisplayName(item, line.cor))}</a></h2><p>Tamanho: ${escapeHTML(line.tamanho)}</p><p>Cor: ${escapeHTML(line.cor)}</p><span class="product-price-current">${formatCurrency(item.preco)}</span></div><div class="cart-item-controls"><div class="quantity-control"><button type="button" data-action="cart-quantity" data-key="${line.key}" data-quantity-change="-1" aria-label="Diminuir quantidade">−</button><output>${line.quantidade}</output><button type="button" data-action="cart-quantity" data-key="${line.key}" data-quantity-change="1" aria-label="Aumentar quantidade">+</button></div><button class="remove-button" type="button" data-action="remove-cart" data-key="${line.key}">Remover</button></div></article>`).join('')}</div><aside class="cart-summary"><h2>Resumo do pedido</h2>${summaryMarkup(items, totals)}<a class="button button--full" href="#/entrega">Continuar para entrega</a></aside></div></section>`;
+  return `<section class="cart-shell container"><h1>Meu carrinho</h1><div class="cart-layout"><div class="cart-items">${items.map(({ line, item }) => `<article class="cart-item"><a class="cart-item-image" href="#/produto/${item.id}"><img src="${line.imagem || getProductImageForColor(item, line.cor)}" alt="${escapeHTML(line.nome || getProductDisplayName(item, line.cor))}" loading="lazy" /></a><div class="cart-item-info"><h2><a href="#/produto/${item.id}">${escapeHTML(line.nome || getProductDisplayName(item, line.cor))}</a></h2><p>Tamanho: ${escapeHTML(line.tamanho)}</p><p>Cor: ${escapeHTML(line.cor)}</p><span class="product-price-current">${formatCurrency(item.preco)}</span></div><div class="cart-item-controls"><div class="quantity-control"><button type="button" data-action="cart-quantity" data-key="${line.key}" data-quantity-change="-1" aria-label="Diminuir quantidade">−</button><output>${line.quantidade}</output><button type="button" data-action="cart-quantity" data-key="${line.key}" data-quantity-change="1" aria-label="Aumentar quantidade">+</button></div><button class="remove-button" type="button" data-action="remove-cart" data-key="${line.key}">Remover</button></div></article>`).join('')}</div><aside class="cart-summary"><h2>Resumo do pedido</h2>${summaryMarkup(items, totals)}<a class="button button--full" href="#/entrega" data-action="continue-to-delivery">Continuar para entrega</a></aside></div></section>`;
+}
+
+function openCheckoutModal() {
+  if (document.getElementById('checkout-auth-modal')) return;
+  const modal = document.createElement('div');
+  modal.id = 'checkout-auth-modal';
+  modal.dataset.action = 'close-checkout-modal';
+  modal.setAttribute('role', 'presentation');
+  modal.innerHTML = `<div role="dialog" aria-modal="true" aria-labelledby="checkout-auth-title" tabindex="-1" style="position:relative;width:min(90%,520px);box-sizing:border-box;padding:42px 34px 34px;background:#F3EFEF;border:1px solid rgba(139,58,74,.18);box-shadow:0 18px 55px rgba(35,22,26,.2);text-align:center;animation:eloraModalIn .22s ease-out"><button type="button" data-action="close-checkout-modal" aria-label="Fechar" style="position:absolute;top:12px;right:16px;border:0;background:transparent;color:#8B3A4A;font-size:28px;line-height:1;cursor:pointer">×</button><p class="eyebrow">Finalização</p><h2 id="checkout-auth-title" style="margin:10px 0 14px;font-family:Georgia,serif;color:#8B3A4A">Antes de continuar</h2><p style="max-width:410px;margin:0 auto 28px;line-height:1.6">Para finalizar sua compra, entre na sua conta.</p><div style="display:flex;justify-content:center"><button type="button" class="button" data-action="checkout-login" style="width:100%;min-height:54px;background:#8B3A4A;color:#fff;border-color:#8B3A4A">Fazer login</button></div></div>`;
+  Object.assign(modal.style, { position: 'fixed', inset: '0', zIndex: '1000', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box', background: 'rgba(0,0,0,.35)' });
+  document.body.appendChild(modal);
+  modal.querySelector('[role="dialog"]')?.focus();
+}
+
+function closeCheckoutModal() {
+  document.getElementById('checkout-auth-modal')?.remove();
+}
+
+function handleCheckoutContinue() {
+  if (hasActiveSession()) {
+    navigate('#/entrega');
+    return;
+  }
+  openCheckoutModal();
 }
 
 function inputField(name, label, value, required = false, type = 'text', full = false, autocomplete = '') {
@@ -602,11 +710,12 @@ function renderDeliveryPage() {
 }
 
 function renderPaymentPage() {
+  pixPaymentConfirmed = false;
   const address = readStorage(STORAGE_KEYS.address, {});
   const items = cartDetails();
   if (!items.length) return renderCartPage();
   if (!address.name || !address.zip || !address.street || !address.number || !address.neighborhood || !address.city || !address.state) return renderDeliveryPage();
-  return `<section class="checkout-shell container"><div class="checkout-title"><p class="eyebrow">Finalização</p><h1>Forma de pagamento</h1><p>Escolha uma forma de pagamento para concluir seu pedido.</p></div>${renderCheckoutSteps('payment')}<div class="checkout-layout"><form class="form-card" id="payment-form" novalidate><h2>Pagamento</h2><div class="payment-options"><label class="payment-option"><input type="radio" name="payment" value="card" data-payment="card" checked /><span><strong>Cartão de crédito</strong><small>Até 6x sem juros</small></span></label><label class="payment-option"><input type="radio" name="payment" value="pix" data-payment="pix" /><span><strong>PIX</strong><small>Pagamento com aprovação imediata.</small></span></label></div><div class="payment-fields" id="card-fields">${inputField('cardNumber', 'Número do cartão', '', true, 'text', true, 'cc-number')}${inputField('cardHolder', 'Nome no cartão', '', true, 'text', true, 'cc-name')}<div class="form-grid">${inputField('expiry', 'Validade', '', true, 'text', false, 'cc-exp')}${inputField('cvv', 'CVV', '', true, 'text', false, 'cc-csc')}</div></div><div class="form-actions"><a class="button button--outline" href="#/entrega">Voltar para entrega</a><button class="button" type="submit">Finalizar compra</button></div></form><aside class="order-summary"><h2>Resumo do pedido</h2>${summaryMarkup(items, cartTotals(items))}<p class="summary-note">Seus dados são utilizados apenas para simular o fluxo da compra.</p></aside></div></section>`;
+  return `<section class="checkout-shell container"><div class="checkout-title"><p class="eyebrow">Finalização</p><h1>Forma de pagamento</h1><p>Escolha uma forma de pagamento para concluir seu pedido.</p></div>${renderCheckoutSteps('payment')}<div class="checkout-layout"><form class="form-card" id="payment-form" novalidate><h2>Pagamento</h2><div class="payment-options"><label class="payment-option"><input type="radio" name="payment" value="card" data-payment="card" checked /><span><strong>Cartão de crédito</strong><small>Até 6x sem juros</small></span></label><label class="payment-option"><input type="radio" name="payment" value="pix" data-payment="pix" /><span><strong>PIX</strong><small>Pagamento com aprovação imediata.</small></span></label></div><div id="pix-payment-card" hidden style="margin-top:22px;padding:18px;background:#F3EFEF;border:1px solid rgba(139,58,74,.16);border-radius:8px"><h3 style="margin:0 0 8px;color:#8B3A4A;font-family:Georgia,serif">Pagamento via Pix</h3><p style="margin:0 0 12px;color:#6f6264;font-size:14px;line-height:1.45">Faça o pagamento usando o QR Code. O código expira em alguns minutos.</p><div style="display:grid;grid-template-columns:minmax(180px,210px) minmax(0,1fr);gap:16px;align-items:center"><div style="padding:12px;background:#fff;text-align:center;border:1px solid rgba(139,58,74,.1)"><img id="pix-qr" src="${pixQrUrl()}" alt="QR Code para pagamento via Pix" style="display:block;width:100%;max-width:210px;margin:0 auto" /></div><div><p style="margin:0 0 8px;color:#2e2527;font-weight:600">Total da compra: ${formatCurrency(cartTotals(items).total)}</p><p style="margin:0 0 8px;color:#6f6264;font-size:13px;line-height:1.45">Abra o aplicativo do seu banco, escaneie o QR Code e confirme o pagamento. Ou copie o código Pix e cole no aplicativo do seu banco.</p><div style="padding:12px;background:#fff;border:1px solid rgba(139,58,74,.12);font-size:12px;line-height:1.4;word-break:break-all;color:#6f6264">${escapeHTML(PIX_CODE)}</div><button type="button" class="button button--outline" data-action="copy-pix-code" style="margin-top:8px;color:#8B3A4A;border-color:#8B3A4A">Copiar código Pix</button><p id="pix-timer" style="margin:10px 0 0;color:#8B3A4A;font-size:13px">Este código expira em: 05:00</p><p id="pix-expired" hidden style="margin:6px 0 0;color:#8B3A4A;font-size:13px">Código Pix expirado.</p><button type="button" class="button" data-action="pix-paid" style="display:block;margin-top:12px;background:#8B3A4A;color:#fff;border-color:#8B3A4A">Já fiz o pagamento</button><p id="pix-payment-status" style="margin:8px 0 0;color:#6f6264;font-size:13px">Aguardando pagamento.</p><p id="pix-finalize-error" hidden style="margin:12px 0 0;padding:10px;background:#F3EFEF;color:#8B3A4A;font-size:13px;line-height:1.45">Realize o pagamento via Pix antes de finalizar a compra.<br><span>Após realizar o pagamento, clique em 'Já fiz o pagamento' para continuar.</span></p></div></div></div><div class="payment-fields" id="card-fields">${inputField('cardNumber', 'Número do cartão', '', true, 'text', true, 'cc-number')}${inputField('cardHolder', 'Nome no cartão', '', true, 'text', true, 'cc-name')}<div class="form-grid">${inputField('expiry', 'Validade', '', true, 'text', false, 'cc-exp')}${inputField('cvv', 'CVV', '', true, 'text', false, 'cc-csc')}</div></div><div class="form-actions"><a class="button button--outline" href="#/entrega">Voltar para entrega</a><button class="button" type="submit">Finalizar compra</button></div></form><aside class="order-summary"><h2>Resumo do pedido</h2>${summaryMarkup(items, cartTotals(items))}<p class="summary-note">Seus dados são utilizados apenas para simular o fluxo da compra.</p></aside></div></section>`;
 }
 
 function renderConfirmationPage() {
@@ -618,9 +727,10 @@ function renderAccountPage() {
   const customer = getCustomer();
   const accountMenu = `<nav class="account-menu" aria-label="Menu da conta"><a class="is-active" href="#/conta">Meus dados</a><a href="#/pedidos">Meus pedidos</a>${hasActiveSession() ? '<button type="button" data-action="logout">Sair da conta</button>' : ''}</nav>`;
   if (!hasActiveSession()) {
-    return `<section class="account-shell container"><div class="page-heading"><p class="eyebrow">Área da cliente</p><h1>Minha conta</h1><p>Entre na sua conta para acessar seus dados e acompanhar seus pedidos.</p></div><div class="account-layout">${accountMenu}<div class="form-card account-form-card"><h2>Visitante</h2><p>Você não está conectada. Os dados da sessão anterior não estão disponíveis.</p></div></div></section>`;
+    return `<section class="account-shell container" style="min-height:clamp(620px,calc(100vh - 180px),820px);display:flex;flex-direction:column;justify-content:center;padding:48px 20px 64px;box-sizing:border-box"><div class="page-heading" style="width:100%;max-width:680px;margin:0 auto 34px;text-align:center"><p class="eyebrow">Área da cliente</p><h1>Minha conta</h1><p style="max-width:560px;margin:12px auto 0">Entre na sua conta para acessar seus dados e acompanhar seus pedidos.</p></div><div class="account-layout" style="width:100%;display:flex;justify-content:center"><form class="form-card account-form-card" id="login-form" novalidate style="width:min(100%,560px);box-sizing:border-box;padding:clamp(28px,5vw,52px);margin:0 auto;background:#fff;border:1px solid rgba(139,58,74,.16);box-shadow:0 14px 36px rgba(61,36,42,.08)"><h2 style="margin:0 0 30px;text-align:center;font-family:Georgia,serif;font-size:clamp(1.6rem,3vw,2.15rem);color:#8B3A4A">Entrar</h2><div class="form-field"><label for="loginIdentity">E-mail *</label><input id="loginIdentity" name="loginIdentity" type="email" required autocomplete="username" inputmode="email" style="width:100%;min-height:54px;box-sizing:border-box;padding:0 16px;border:1px solid rgba(139,58,74,.28);background:#fff;font-size:1rem" /><p class="field-error" data-error-for="loginIdentity"></p></div><div class="form-field" style="margin-top:22px"><label for="loginPassword">Senha *</label><input id="loginPassword" name="loginPassword" type="password" required autocomplete="current-password" style="width:100%;min-height:54px;box-sizing:border-box;padding:0 16px;border:1px solid rgba(139,58,74,.28);background:#fff;font-size:1rem" /><label for="show-login-password" style="display:flex;align-items:center;justify-content:flex-end;gap:5px;width:max-content;margin:9px 0 0 auto;font-size:13px;line-height:1.2;font-weight:400;color:#6f6264;cursor:pointer;white-space:nowrap"><input id="show-login-password" type="checkbox" data-action="toggle-login-password" style="width:14px;height:14px;margin:0;accent-color:#8B3A4A;cursor:pointer" /> <span>Mostrar senha</span></label><p class="field-error" data-error-for="loginPassword"></p></div><p class="field-error" id="login-error" style="margin-top:12px"></p><div class="form-actions" style="display:flex;justify-content:center;margin-top:30px;transform:translateY(-20px)"><span></span><button class="button" type="submit" style="width:min(100%,230px);min-height:52px;background:#8B3A4A;color:#fff;border-color:#8B3A4A">Entrar</button></div><div style="margin-top:18px;text-align:center;font-size:14px;color:#6f6264">Não tem uma conta? <button type="button" data-action="open-register" style="padding:0;border:0;background:transparent;color:#8B3A4A;font:600 14px/1.4 inherit;cursor:pointer;text-decoration:none">Cadastre-se</button></div></form></div></section>`;
   }
-  return `<section class="account-shell container"><div class="page-heading"><p class="eyebrow">Área da cliente</p><h1>Minha conta</h1><p>Gerencie seus dados e acompanhe suas compras.</p></div><div class="account-layout">${accountMenu}<form class="form-card account-form-card" id="account-form" novalidate><h2>Meus dados</h2><div class="form-grid">${inputField('customerName', 'Nome completo', customer.name || '', true, 'text', true, 'name')}${inputField('customerEmail', 'E-mail', customer.email || '', true, 'email', true, 'email')}${inputField('customerPhone', 'Telefone', customer.phone || '', false, 'tel', false, 'tel')}${inputField('customerPassword', 'Senha', customer.password || '', false, 'password', false, 'new-password')}</div><div class="form-actions"><span></span><button class="button" type="submit">Salvar alterações</button></div></form></div></section>`;
+  const firstName = String(customer.name || 'cliente').trim().split(/\s+/)[0] || 'cliente';
+  return `<section class="account-shell container"><div class="page-heading"><p class="eyebrow">Área da cliente</p><h1>Minha conta</h1><p>Olá, ${escapeHTML(firstName)}. Gerencie seus dados e acompanhe suas compras.</p></div><div class="account-layout" style="width:100%;max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(190px,240px) minmax(0,1fr);gap:24px;align-items:start">${accountMenu}<form class="form-card account-form-card" id="account-form" novalidate style="width:100%;max-width:1000px;box-sizing:border-box"><h2>Meus dados</h2><div class="form-grid">${inputField('customerName', 'Nome completo', customer.name || '', true, 'text', true, 'name')}${inputField('customerEmail', 'E-mail', customer.email || '', true, 'email', true, 'email')}${inputField('customerPhone', 'Telefone', customer.phone || '', false, 'tel', false, 'tel')}${inputField('customerPassword', 'Senha', customer.password || '', false, 'password', false, 'new-password')}</div><div class="form-actions"><span></span><button class="button" type="submit">Salvar alterações</button></div></form></div></section>`;
 }
 
 function renderOrdersPage() {
@@ -658,13 +768,99 @@ function handleDeliverySubmit(form) {
   navigate('#/pagamento');
 }
 
+function pixQrUrl() {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(PIX_CODE)}`;
+}
+
+function formatPixTime(seconds) {
+  const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const remainder = (seconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${remainder}`;
+}
+
+function updatePixTimer() {
+  const timer = document.getElementById('pix-timer');
+  const expired = document.getElementById('pix-expired');
+  const qr = document.getElementById('pix-qr');
+  if (!timer || !expired || !qr) return;
+  timer.textContent = pixSecondsRemaining > 0 ? `Este código expira em: ${formatPixTime(pixSecondsRemaining)}` : 'Código Pix expirado.';
+  const isExpired = pixSecondsRemaining <= 0;
+  expired.hidden = !isExpired;
+  qr.style.opacity = isExpired ? '0.35' : '1';
+  qr.style.filter = isExpired ? 'grayscale(1)' : 'none';
+}
+
+function startPixTimer(reset = false) {
+  if (reset) pixSecondsRemaining = 300;
+  window.clearInterval(pixCountdownTimer);
+  updatePixTimer();
+  pixCountdownTimer = window.setInterval(() => {
+    pixSecondsRemaining = Math.max(0, pixSecondsRemaining - 1);
+    updatePixTimer();
+    if (pixSecondsRemaining === 0) window.clearInterval(pixCountdownTimer);
+  }, 1000);
+}
+
 function togglePaymentFields(method) {
   const fields = document.getElementById('card-fields');
+  const pixCard = document.getElementById('pix-payment-card');
   if (fields) fields.classList.toggle('is-hidden', method === 'pix');
+  if (pixCard) {
+    pixCard.hidden = method !== 'pix';
+    if (method === 'pix') {
+      pixPaymentConfirmed = false;
+      startPixTimer(true);
+      const status = document.getElementById('pix-payment-status');
+      const error = document.getElementById('pix-finalize-error');
+      if (status) status.textContent = 'Aguardando pagamento.';
+      if (error) error.hidden = true;
+    } else window.clearInterval(pixCountdownTimer);
+  }
+}
+
+function simulatePixApproval() {
+  const button = document.querySelector('[data-action="pix-paid"]');
+  const status = document.getElementById('pix-payment-status');
+  const form = document.getElementById('payment-form');
+  if (!button || !status || !form || button.disabled) return;
+  button.disabled = true;
+  button.textContent = 'VERIFICANDO PAGAMENTO...';
+  status.textContent = 'Verificando pagamento...';
+  window.setTimeout(() => {
+    pixPaymentConfirmed = true;
+    status.innerHTML = '<strong style="color:#8B3A4A">Pagamento aprovado</strong><br><span>Seu pedido foi confirmado com sucesso.</span>';
+    button.textContent = 'Pagamento aprovado';
+    const error = document.getElementById('pix-finalize-error');
+    if (error) error.hidden = true;
+  }, 1000);
+}
+
+function copyPixCode() {
+  const button = document.querySelector('[data-action="copy-pix-code"]');
+  const done = () => {
+    if (!button) return;
+    button.textContent = 'Código copiado';
+    window.setTimeout(() => { if (button.isConnected) button.textContent = 'Copiar código Pix'; }, 2200);
+  };
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(PIX_CODE).then(done).catch(() => {});
+  else {
+    const helper = document.createElement('textarea');
+    helper.value = PIX_CODE;
+    document.body.appendChild(helper);
+    helper.select();
+    document.execCommand('copy');
+    helper.remove();
+    done();
+  }
 }
 
 function handlePaymentSubmit(form) {
   const method = form.elements.payment.value;
+  if (method === 'pix' && !pixPaymentConfirmed) {
+    const error = document.getElementById('pix-finalize-error');
+    if (error) error.hidden = false;
+    return;
+  }
   if (method === 'card') {
     const rules = [
       { name: 'cardNumber', message: 'Informe o número do cartão.' }, { name: 'cardHolder', message: 'Informe o nome no cartão.' },
@@ -682,11 +878,58 @@ function handlePaymentSubmit(form) {
   navigate('#/confirmacao');
 }
 
+function renderRegisterPage() {
+  return `<section class="account-shell container" style="min-height:clamp(620px,calc(100vh - 180px),820px);display:flex;flex-direction:column;justify-content:center;padding:48px 20px 64px;box-sizing:border-box"><div class="page-heading" style="width:100%;max-width:680px;margin:0 auto 34px;text-align:center"><p class="eyebrow">Área da cliente</p><h1>Crie sua conta</h1><p style="max-width:560px;margin:12px auto 0">Cadastre seus dados para acompanhar seus pedidos.</p></div><form class="form-card account-form-card" id="register-form" novalidate style="width:min(100%,560px);box-sizing:border-box;padding:clamp(28px,5vw,52px);margin:0 auto;background:#fff;border:1px solid rgba(139,58,74,.16);box-shadow:0 14px 36px rgba(61,36,42,.08)"><h2 style="margin:0 0 26px;text-align:center;font-family:Georgia,serif;color:#8B3A4A">Cadastro</h2>${inputField('registerName', 'Nome completo', '', true, 'text', true, 'name')}${inputField('registerEmail', 'E-mail', '', true, 'email', true, 'email')}${inputField('registerPassword', 'Senha', '', true, 'password', true, 'new-password')}${inputField('registerConfirmPassword', 'Confirmar senha', '', true, 'password', true, 'new-password')}<p class="field-error" id="register-error" style="margin-top:12px"></p><div class="form-actions" style="display:flex;justify-content:center;gap:12px;margin-top:26px"><button class="button button--outline" type="button" data-action="back-to-login">Voltar</button><button class="button" type="submit" style="min-width:180px;background:#8B3A4A;color:#fff;border-color:#8B3A4A">Cadastrar</button></div></form></section>`;
+}
+
+function handleRegisterSubmit(form) {
+  const name = String(form.elements.registerName?.value || '').trim();
+  const email = String(form.elements.registerEmail?.value || '').trim();
+  const password = String(form.elements.registerPassword?.value || '');
+  const confirmPassword = String(form.elements.registerConfirmPassword?.value || '');
+  const error = form.querySelector('#register-error');
+  if (!name || !email || !password || !confirmPassword) { if (error) error.textContent = 'Preencha todos os campos obrigatórios.'; return; }
+  if (!email.includes('@')) { if (error) error.textContent = 'Digite um e-mail válido com @.'; return; }
+  if (password !== confirmPassword) { if (error) error.textContent = 'As senhas não coincidem.'; return; }
+  writeStorage(STORAGE_KEYS.customer, { name, email, phone: '', password });
+  localStorage.removeItem(STORAGE_KEYS.session);
+  showToast('Cadastro realizado com sucesso.');
+  navigate('#/conta');
+}
+
+function handleLoginSubmit(form) {
+  const identity = String(form.elements.loginIdentity?.value || '').trim();
+  const password = String(form.elements.loginPassword?.value || '').trim();
+  const error = form.querySelector('#login-error');
+  if (!identity || !password) {
+    if (error) error.textContent = 'Preencha todos os campos.';
+    return;
+  }
+  if (!identity.includes('@')) {
+    if (error) error.textContent = 'Digite um e-mail válido com @.';
+    return;
+  }
+  const storedCustomer = getCustomer();
+  const normalizedIdentity = normalizeText(identity);
+  const matchesStoredCustomer = Boolean(storedCustomer.email && normalizeText(storedCustomer.email) === normalizedIdentity);
+  if (matchesStoredCustomer && storedCustomer.password && storedCustomer.password !== password) {
+    if (error) error.textContent = 'Nome ou e-mail e senha não conferem.';
+    return;
+  }
+  const displayName = storedCustomer.name && matchesStoredCustomer ? storedCustomer.name : (identity.includes('@') ? identity.split('@')[0] : identity);
+  const email = storedCustomer.email && matchesStoredCustomer ? storedCustomer.email : (identity.includes('@') ? identity : '');
+  saveCustomer({ name: displayName, email, phone: storedCustomer.phone || '', password });
+  const nextRoute = state.returnToCartAfterLogin ? '#/carrinho' : '#/conta';
+  state.returnToCartAfterLogin = false;
+  navigate(nextRoute);
+}
+
 function handleAccountSubmit(form) {
   const rules = [{ name: 'customerName', message: 'Informe seu nome.' }, { name: 'customerEmail', message: 'Informe seu e-mail.' }];
   if (!validateFormFields(form, rules)) return;
   const values = Object.fromEntries(new FormData(form).entries());
   saveCustomer({ name: values.customerName, email: values.customerEmail, phone: values.customerPhone, password: values.customerPassword });
+  render();
 }
 
 function updateCartCount() {
@@ -766,6 +1009,18 @@ function handleClick(event) {
   const target = event.target.closest('[data-action]');
   if (!target) return;
   const action = target.dataset.action;
+  if (action === 'copy-pix-code') { event.preventDefault(); copyPixCode(); return; }
+  if (action === 'pix-paid') { event.preventDefault(); simulatePixApproval(); return; }
+  if (action === 'continue-to-delivery') { event.preventDefault(); handleCheckoutContinue(); return; }
+  if (action === 'checkout-login') { state.returnToCartAfterLogin = true; closeCheckoutModal(); navigate('#/conta'); return; }
+  if (action === 'open-register') { event.preventDefault(); const main = document.getElementById('main-content'); if (main) main.innerHTML = renderRegisterPage(); return; }
+  if (action === 'back-to-login') { event.preventDefault(); navigate('#/conta'); return; }
+  if (action === 'close-checkout-modal') { closeCheckoutModal(); return; }
+  if (action === 'toggle-login-password') {
+    const passwordInput = document.getElementById('loginPassword');
+    if (passwordInput) passwordInput.type = target.checked ? 'text' : 'password';
+    return;
+  }
   if (action === 'toggle-mobile-menu') { event.preventDefault(); toggleMobileMenu(); return; }
   if (action === 'stop-propagation') { event.stopPropagation(); return; }
   if (action === 'open-filters') { state.mobileFiltersOpen = true; render(); document.querySelector('.mobile-filter-backdrop')?.classList.add('is-open'); return; }
@@ -870,6 +1125,8 @@ function handleSubmit(event) {
   if (form.id === 'delivery-form') { event.preventDefault(); handleDeliverySubmit(form); }
   if (form.id === 'payment-form') { event.preventDefault(); handlePaymentSubmit(form); }
   if (form.id === 'account-form') { event.preventDefault(); handleAccountSubmit(form); }
+  if (form.id === 'login-form') { event.preventDefault(); handleLoginSubmit(form); }
+  if (form.id === 'register-form') { event.preventDefault(); handleRegisterSubmit(form); }
 }
 
 document.addEventListener('click', handleClick);
