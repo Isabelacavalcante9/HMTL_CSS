@@ -1,0 +1,57 @@
+<h1>Finalizar Compra</h1>
+<form> 
+    <fieldset>
+        <legend>Endereço de Entrega</legend>
+        <label for="entrega">Nome do Destinatário:</label>
+        <input type="text" id="entrega" name="endereço" >
+        <br>
+        <br>
+        <label for="cep">CEP</label>
+        <input type="number" id="cep" name="cep" placeholder="0000-00">
+        <br>
+        <br>
+        <label for="rua">Rua:</label>
+        <input type="text" id="rua" name="rua">
+        <br>
+        <br>
+        <label for="num">Número:</label>
+        <input type="number" id="num" name="numero">
+        <br>
+        <br>
+        <label for="complemento">Complemento:</label>
+        <input type="text" id="complemento" name="complemento" >
+        </fieldset>
+</form>
+<br>
+<br>
+
+<form>
+    <fieldset>
+<legend>Opções de Entrega</legend>
+<label for="entrega">Período de entrega:</label>
+<select id="entrega" name="entrega">
+    <option value="">Manhã (08h-12h)</option>
+</select>
+<p>Instruções de Entrega:</p>
+<input type="radio" id="portaria" name="entrega">
+<label for="portaria">Deixar na Portaria</label>
+<br>
+<input type="radio" id="maos" name="entrega">
+<label for="maos">Entregar em mãos</label>
+<br>
+<input type="radio" id="ligar" name="entrega">
+<label for="ligar">Ligar ao chegar</label>
+<br>
+<br>
+<label for="cupom">Cupom de Desconto:</label>
+<input type="text" id="cupom" name="cupom">
+<br>
+<br>
+
+    <input type="checkbox" id="whatsapp" name="receber">
+    <label for="whatsapp">Receber ofertas por WhatsApp</label>
+
+</fieldset>
+<button type="submit">Finalizar Compra</button>
+</form>
+

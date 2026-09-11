@@ -1,0 +1,55 @@
+<h1>Cotação de Seguro de Veículo</h1>
+<form>
+<fieldset>
+    <legend>Condutor</legend>
+    <label for="nome">Nome do Proprietario:</label>
+    <input type="text" id="nome" name="nome">
+    <br>
+    <br>
+    <label for="cnh">CNH:</label>
+    <input type="number" id="cnh" name="cnh">
+    <br>
+    <br>
+    <label for="emissao">Data de Emissão da CNH:</label>
+    <input type="date" id="emissao" name="emissao">
+    <br>
+    <br>
+    <input type="radio" id="solteiro" name="estado">
+    <label for="solteiro">Solteiro</label>
+    <input type="radio" id="casado" name="estado">
+    <label for="casado">Casado</label>
+    <input type="radio" id="divorciado" name="estado">
+    <label for="divorciado">Divorciado</label>
+    <input type="radio" id="viuvo" name="estado">
+    <label for="viuvo">Viúvo</label>
+</fieldset>
+<fieldset>
+    <legend>Veículo</legend>
+    <label for="placa">Placa do Carro:</label>
+    <input type="text" id="placa" name="placa" placeholder="ABC-1234">
+    <br>
+    <br>
+    <label for="marca">Marca do veículo</label>
+    <select name="marca" id="marca">
+     <option value="">Fiat</option>
+    </select>
+    <br>
+    <br>
+    <label for="ano">Ano do modelo</label>
+    <input type="number" id="ano" name="ano">
+</fieldset>
+<fieldset>
+    <legend>Uso</legend>
+    <p>Usa o carro para trabalho(Uber/Táxi)? </p>
+    <input type="radio" id="sim" name="trabalho">
+    <label for="sim">Sim</label>
+        <input type="radio" id="nao" name="trabalho">
+    <label for="nao">Não</label>
+    <br>
+    <br>
+    <input type="checkbox" id="rastreador" name="rastreador">
+    <label for="rastreador">Possui rastreador instalado</label>
+</fieldset>
+<br>
+<button type="submit">Solicitar Cotação</button>
+</form>
